@@ -21,10 +21,6 @@ The output database is self-contained and requires no server or API — drop it 
 
 You need the **ANTT PDF** for the relevant year — for example `ANTT_2026.pdf`. This is published annually by the Australian Hydrographic Office and available from [hydro.gov.au](https://www.hydro.gov.au).
 
-The script expects the standard ANTT layout:
-- **Pages 1–237** — primary port tide predictions (3 pages per port × 79 ports, covering all 12 months in Jan–Apr / May–Aug / Sep–Dec groups)
-- **Pages 280–319** — secondary port tidal datum tables (Chapter 4)
-
 No other input is required. Everything — primary predictions, secondary port offsets, datum levels — is read directly from the PDF.
 
 ---
