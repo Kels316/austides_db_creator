@@ -1,0 +1,37 @@
+name: Refresh Tide DB
+
+# Runs annually on 1 January to rebuild the DB from the new ANTT PDF.
+# Also triggerable manually from the Actions tab.
+on:
+  schedule:
+    - cron: '0 2 1 1 *'   # 02:00 UTC on 1 January each year
+  workflow_dispatch:        # allows manual "Run workflow" button in GitHub UI
+    inputs:
+      pdf_url:
+        description: 'Direct URL to ANTT PDF (leave blank to use bundled PDF)'
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pypdf
+
+      - name: Build tide-db.js
+        run: python3 build_tide_db.py
+
+      - name: Commit tide-db.js back to repo
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore: rebuild tide-db.js from ANTT PDF'
+          file_pattern: 'tide-db.js'
