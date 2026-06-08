@@ -122,7 +122,7 @@ def parse_port_header(text):
     tz_min = int(tz_str[:2]) * 60 + int(tz_str[2:])
     return name, lat, lon, tz_min
 
-ENTRY_RE = re.compile(r'(?<!\d)(\d{4})\s+(\d+\.\d+)(TH|FR|SA|SU|MO|TU|WE)?')
+ENTRY_RE = re.compile(r'(?<!\d)(\d{4})\s+(\d+\.\d+)\s*(TH|FR|SA|SU|MO|TU|WE)?')
 
 def parse_tide_predictions(pages_text, tz_offset_min):
     """
@@ -200,9 +200,9 @@ print(f"\nTotal primary ports: {len(primary_port_data)}\n")
 print("=== Parsing secondary port tables ===")
 
 SEC_RE = re.compile(
-    r'([A-Z][A-Z\s&\.\(\)\-\'/,]+?)(\d{4,6})'
-    r'(\d{2})\x00\s*(\d{2})[´\']\s*([SN])\s+'
-    r'(\d{2,3})\x00\s*(\d{2})[´\']\s*([EW])\s+'
+    r'([A-Z][A-Z\s&\.\(\)\-\'/,]+?)(\d{4,6})\s*'
+    r'(\d{2})[\x00°\s]+(\d{2})[´\']\s*([SN])\s+'
+    r'(\d{2,3})[\x00°\s]+(\d{2})[´\']\s*([EW])\s+'
     r'([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+'
     r'(NA|UNK|[-\d.]+)'
 )
@@ -213,7 +213,21 @@ JUNK_NAME_RE = re.compile(r'^(MSL|MHHW|MHLW|MLHW|MLLW|\d)', re.I)
 
 secondary_entries = []   # final list: each entry has 'time_offset_min' filled in
 
-for page_idx in range(279, 320):
+# Auto-detect datum table pages — must contain MHWS/MLWS column headers AND
+# at least one port entry with a station ID (5–6 digit number) and coordinates.
+# This excludes front-matter/glossary pages that mention MHWS in prose.
+_DATUM_PORT_RE = re.compile(r'\d{5,6}\s+\d{2}[^\d]+\d{2}[´\']')
+datum_pages = [
+    i for i in range(len(r.pages))
+    if all(k in (r.pages[i].extract_text() or '') for k in ('MHWS', 'MLWS', 'MSL'))
+    and _DATUM_PORT_RE.search(r.pages[i].extract_text() or '')
+]
+if not datum_pages:
+    print("ERROR: Could not find secondary port datum tables in PDF")
+    sys.exit(1)
+print(f"Datum table pages detected: {datum_pages[0]}–{datum_pages[-1]} ({len(datum_pages)} pages)")
+
+for page_idx in datum_pages:
     text = (r.pages[page_idx].extract_text() or '').replace('\n', ' ')
 
     # ── a. Collect standard ports and secondary ports on this page, in order ──
